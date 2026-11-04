@@ -1,0 +1,172 @@
+# Python transversal para soluciones con IA
+
+Repositorio del curso de 40 horas. A lo largo de las sesiones vamos a construir un solo proyecto:
+un **asistente documental empresarial** que responde preguntas sobre las políticas y manuales de
+una empresa, citando de dónde sacó cada respuesta.
+
+El repositorio crece con el curso: antes de cada sesión se publica su punto de partida.
+
+## Primeros pasos
+
+Requisitos: [uv](https://docs.astral.sh/uv/) y Git. Más adelante: Ollama (sesión 6), Docker
+(sesión 7) y Tesseract (sesión 11). Todo se explica, para Mac, Windows y Linux, en
+**[INSTALACION.md](INSTALACION.md)**, con el modelo que conviene según la memoria de su equipo.
+
+Los comandos de esta guía son para **PowerShell en Windows**; en Mac y Linux son los mismos, salvo
+la instalación.
+
+1. Instale Git y uv, y **cierre y vuelva a abrir la terminal** (si usa la de VS Code, cierre VS Code
+   completo): la terminal que ya estaba abierta no encuentra los programas recién instalados.
+
+   ```powershell
+   winget install --id Git.Git
+   winget install --id astral-sh.uv
+   ```
+
+2. Configure su nombre y correo para los commits (una sola vez):
+
+   ```powershell
+   git config --global user.name "Nombre Apellido"
+   git config --global user.email "correo@ejemplo.com"
+   ```
+
+3. En GitHub, botón **Use this template → Create a new repository**: cada uno trabaja en su propio
+   repositorio, y su pareja revisa sus Pull Requests.
+4. Clone **su** repositorio en una carpeta corta y sin espacios, por ejemplo `C:\dev`. La primera vez
+   se abre el navegador para que inicie sesión en GitHub; Git recuerda la sesión, no hace falta crear
+   llaves SSH ni tokens.
+
+   ```powershell
+   mkdir C:\dev -Force
+   cd C:\dev
+   git clone https://github.com/<su-usuario>/<su-repositorio>.git
+   cd <su-repositorio>
+   ```
+
+5. Prepare el entorno. `--python 3.12` hace que uv descargue y use la versión del curso; solo hace
+   falta la primera vez.
+
+   ```powershell
+   uv sync --python 3.12
+   uv run pre-commit install
+   uv run pytest            # debe quedar en verde
+   ```
+
+6. Conecte este repositorio como `upstream`, para recibir cada sesión:
+
+   ```powershell
+   git remote add upstream https://github.com/malbertocuao/curso-python-ia.git
+   ```
+
+## Al comenzar cada sesión
+
+Antes, guarde en un commit lo que tenga pendiente (`git add -A` y `git commit -m "Mi avance"`; si
+dice `nothing to commit`, no había nada). Luego:
+
+```powershell
+git fetch upstream --tags
+git switch main
+git merge s02-inicio          # el número de la sesión que empieza
+uv sync
+uv run pytest                 # las pruebas del taller nuevo aparecen en rojo
+```
+
+### La primera vez: `refusing to merge unrelated histories`
+
+Un repositorio creado con **Use this template** no comparte historia con el del curso, y la primera
+vez Git se niega a unirlos. Esa vez (solo esa), use en lugar del `git merge` de arriba:
+
+```powershell
+git merge s02-inicio --allow-unrelated-histories -X theirs -m "Unir con el repositorio del curso"
+git checkout HEAD~1 -- diagnostico fundamentos
+git commit -m "Conservar mi trabajo del diagnóstico"
+uv sync
+```
+
+`-X theirs` toma la versión del curso de los archivos que chocan (`pyproject.toml`, `uv.lock`,
+`README.md`…) y el `checkout` recupera su trabajo en `diagnostico/` y `fundamentos/`. Si el último
+`commit` dice `nothing to commit`, es normal. Desde ahí, el `git merge` normal ya funciona.
+
+El taller consiste en ponerlas en verde, en una rama y con Pull Request:
+
+```powershell
+git switch -c taller-s02
+# ... implementar ...
+git push -u origin taller-s02  # y abrir el Pull Request para que lo revise su pareja
+```
+
+Las funciones del taller traen su documentación y el cuerpo `raise NotImplementedError`. Las pruebas
+son la especificación: léalas antes de escribir código.
+
+### Si se atrasó o algo no le funciona
+
+Al comienzo de la sesión siguiente se publica la solución de referencia, `sNN-fin`. Para seguir con
+el grupo, tome la versión de referencia de los archivos que necesite:
+
+```powershell
+git fetch upstream --tags
+git checkout s02-fin -- src/asistente/domain/models.py
+```
+
+Lo propio de su proyecto (su tarea, sus documentos, sus casos de evaluación) póngalo en archivos
+aparte, por ejemplo `src/asistente/services/su_tarea.py` y `data/`, para que no choque con lo que
+se publica en cada sesión.
+
+## Ejercicios
+
+La práctica de la introducción y de los anexos A y B llega con `git fetch upstream --tags` y
+`git merge s00-intro`, igual que una sesión.
+
+| Carpeta | Para qué |
+|---|---|
+| `introduccion/` | Práctica de la introducción a Python: `uv run pytest introduccion -v` |
+| `tipos_de_datos/` | Práctica del anexo A, métodos de los tipos: `uv run pytest tipos_de_datos -v` |
+| `pruebas_pytest/` | Práctica del anexo B: usted escribe las pruebas; `uv run python pruebas_pytest/verificar.py` |
+| `diagnostico/` | Prueba diagnóstica de la sesión 1: `uv run pytest diagnostico` |
+| `fundamentos/` | Ejercicios de "Python a fondo", sesiones 1 a 6 (ver `fundamentos/README.md`) |
+
+## Problemas frecuentes en Windows
+
+**"git" o "uv" no se reconoce como comando.** La terminal se abrió antes de instalarlos: ciérrela y
+abra una nueva (en VS Code, cierre VS Code completo).
+
+**`uv sync` falla con `Failed to write to the distribution cache` … `Acceso denegado (os error 5)`.**
+El antivirus está revisando un archivo que uv acaba de descargar. Pruebe en orden, y pase al
+siguiente paso solo si el anterior no funcionó:
+
+```powershell
+# 1. Limpiar la caché y reintentar
+uv cache clean
+uv sync --python 3.12
+
+# 2. Mover la caché fuera de AppData y copiar en lugar de enlazar (queda fijo)
+[Environment]::SetEnvironmentVariable("UV_CACHE_DIR", "$env:USERPROFILE\.uv-cache", "User")
+[Environment]::SetEnvironmentVariable("UV_LINK_MODE", "copy", "User")
+# cierre la terminal, abra una nueva y repita: uv sync --python 3.12
+```
+
+Mientras tanto, cierre cualquier otra terminal o VS Code que esté usando Python en esa carpeta. Si el
+error sigue en un equipo de la empresa, pida a soporte que el antivirus excluya `%LOCALAPPDATA%\uv`,
+`%USERPROFILE%\.uv-cache` y la carpeta del proyecto.
+
+**El entorno quedó con otra versión de Python** (por ejemplo, `uv sync` dice `Using CPython 3.14`).
+Borre el entorno y créelo de nuevo con la versión del curso:
+
+```powershell
+Remove-Item -Recurse -Force .venv
+uv sync --python 3.12
+```
+
+**Error de rutas demasiado largas (`Filename too long`).** Active las rutas largas en Git y trabaje
+en una carpeta corta como `C:\dev`:
+
+```powershell
+git config --global core.longpaths true
+```
+
+## Reglas del repositorio
+
+- El archivo `.env` (llaves de API) **nunca** se sube: copie `.env.example` a `.env` y complételo.
+- `pre-commit` revisa estilo y busca llaves antes de cada commit; la integración continua repite
+  esas revisiones, más `mypy` y las pruebas, en cada Pull Request.
+- Use datos anonimizados: nada de nombres, cédulas ni documentos confidenciales reales.
